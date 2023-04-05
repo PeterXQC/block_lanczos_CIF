@@ -292,3 +292,12 @@ def get_a_posteriori_bound(pts, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, λ
     result += sp.integrate.quad(a_posteriori_bound_integrand, 0, 1, args=(Γl, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, λmax), points = pts)[0]
     result /= np.pi
     return result
+
+# H-wI
+def h_w(Λ, w):
+    h_of_H = Λ-w
+    return h_of_H
+
+def h_norm(X, Λ, h, *args):
+    norm = np.linalg.norm(np.diag(np.sqrt(h(Λ, *args)))@X)
+    return norm
