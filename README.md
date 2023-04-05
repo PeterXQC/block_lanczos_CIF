@@ -11,14 +11,14 @@ This repo contains all that is necessary to reproduce numerical experiments in t
 
 ## matrices
 
-There is only one matrix in `matrices/`, which is used to generate figure 3.6. This matrix is obtained from [Matrix Market](https://math.nist.gov/MatrixMarket/) under the directory 'by collection/Independent Sets and Generators/QCD/'.
+There is only one matrix in `matrices/`, which is used to generate figure 3.6. This matrix is obtained from [Matrix Market](https://math.nist.gov/MatrixMarket/) under the directory `by collection/Independent Sets and Generators/QCD/`.
 
 ## Usage
 
 To generate figures:
-add some script here
-Run each notebook manually (possibly very time consuming).
-Run each notebook manually from loaded data.
+1. 
+2. Run each notebook manually (possibly very time consuming).
+3. Run each notebook manually from loaded data.
 
 ## Special Thanks
 
