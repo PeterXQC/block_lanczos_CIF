@@ -16,9 +16,9 @@ There is only one matrix in `matrices/`, which is used to generate figure 3.6. T
 ## Usage
 
 To generate figures:
-- 1. 
-- 2. Run each notebook manually (possibly very time consuming).
-- 3. Run each notebook manually from loaded data.
+- 
+- Run each notebook manually (possibly very time consuming).
+- Run each notebook manually from loaded data.
 
 ## Special Thanks
 
