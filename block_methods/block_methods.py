@@ -231,7 +231,7 @@ def trig_ineq_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f
     b       : block size
     B_0     : first block
     λmin    : minimum eigenvalue
-    f       : function to integrate
+    f       : function to integrat
     Λ       : specturm of matrix H
     V       : d x b block vector
     Q       : First K-1 blocks of Lanczos vectors
