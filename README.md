@@ -16,7 +16,7 @@ There is only one matrix in `matrices/`, which is used to generate figure 3.6. T
 ## Usage
 
 To generate figures:
-- Run `make_figs.py` (this script runs each notebook in series, and can be very time consuming).
+- Navigate to this folder and run `./make_figs.sh` (this script runs each notebook in series, and can be very time consuming).
 - Run each notebook manually (possibly very time consuming).
 - Run each notebook manually from loaded data.
 
