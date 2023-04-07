@@ -218,7 +218,26 @@ def H_wz(w,z,λmin,λmax):
         return np.abs((z-w)/np.imag(z))
     return np.max([np.abs((λmax-w)/(λmax-z)), np.abs((λmin-w)/(λmin-z))])
 
-def trig_ineq_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k):
+
+def get_lanf(Eval, Evec, b, B_0, f, Q, k):
+    """
+    get lanczos iterate for f(A)V
+    """
+   
+    return Q[:,:b*k]@(Evec@(f(Eval)[:,None]*(Evec.T@(Ei(b*k,b,1)@B_0))))
+  
+    
+def get_lan_wLS(Eval, Evec, b, B_0, w, Q, k):
+    """
+    get lanczos iterate for (H-wI)^{-1}V
+    """
+
+    f = lambda x: 1/(x-w)
+    
+    return get_lanf(Eval, Evec, b, B_0, f, Q, k)
+    
+    
+def trig_ineq_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k, hnorm):
     """
     Input
     -----
@@ -236,6 +255,7 @@ def trig_ineq_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f
     V       : d x b block vector
     Q       : First K-1 blocks of Lanczos vectors
     k       : number of iterations
+    hnorm   : norm function
     
     Returns
     -------
@@ -244,16 +264,15 @@ def trig_ineq_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f
     
     z,dz = contour(t, angle, r, λmin, c)
 
-    errz = 1/(Λ-z)[:,None]*V - Q[:,:b*k]@(Evec@np.diag(1/(Eval-z))@Evec.T@Ei(b*k,b,1)@B_0)
+    lan_zLS = get_lan_wLS(Eval, Evec, b, B_0, z, Q, k)
     
-    trig_ineq_bound = np.abs(f(z))*h_norm(errz, Λ, h_w, w)*np.abs(dz)
+    errz = 1/(Λ-z)[:,None]*V - lan_zLS
+    
+    trig_ineq_bound = np.abs(f(z))*hnorm(errz)*np.abs(dz)
 
     return trig_ineq_bound
 
-def get_lan_wLS(Eval, Evec, b, B_0, w, Q, k):
-   
-    return Q[:,:b*k]@(Evec@((1/(Eval-w))[:,None]*(Evec.T@(Ei(b*k,b,1)@B_0))))
-    
+
 def a_posteriori_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, λmax):
     """
     Input
@@ -284,9 +303,9 @@ def a_posteriori_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin
 
     return a_posteriori_bound
 
-def get_trig_ineq_bound(pts, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k):
-    result = sp.integrate.quad(trig_ineq_bound_integrand, 0, angle, args=(Γ, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k))[0]
-    result += sp.integrate.quad(trig_ineq_bound_integrand, 0, 1, args=(Γl, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k), points = pts)[0]
+def get_trig_ineq_bound(pts, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k, hnorm):
+    result = sp.integrate.quad(trig_ineq_bound_integrand, 0, angle, args=(Γ, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k, hnorm))[0]
+    result += sp.integrate.quad(trig_ineq_bound_integrand, 0, 1, args=(Γl, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k, hnorm), points = pts)[0]
     result /= np.pi
     return result
 
@@ -305,3 +324,20 @@ def h_w(Λ, w):
 def h_norm(X, Λ, h, *args):
     norm = np.linalg.norm(np.sqrt(h(Λ, *args))[:,None]*X)
     return norm
+
+def get_hnorm(Λ,h):
+    """
+    Input
+    -----
+    Λ       : spectrum
+    h       : scalar function
+    
+    Returns
+    -------
+    induced norm : X -> \|X\|_{h(Λ)}
+    """
+    
+    def h_norm(X):
+        return np.linalg.norm(np.sqrt(h(Λ))[:,None]*X)
+    
+    return h_norm
