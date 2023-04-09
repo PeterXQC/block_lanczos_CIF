@@ -194,7 +194,7 @@ def get_CwinvCz(Eval,Evec,z,w,b,B_0):
     
     return CwinvCz
 
-def H_wz(w,z,λmin,λmax):
+def Q_wz(w,z,λmin,λmax):
     """
     Input
     -----
@@ -205,7 +205,7 @@ def H_wz(w,z,λmin,λmax):
     
     Output
     ------
-    H_wz = max_{x\in[λmin,λmax]} |x-w|/|x-z|
+    Q_wz = max_{x\in[λmin,λmax]} |x-w|/|x-z|
     """
         
     
@@ -218,6 +218,17 @@ def H_wz(w,z,λmin,λmax):
         return np.abs((z-w)/np.imag(z))
     return np.max([np.abs((λmax-w)/(λmax-z)), np.abs((λmin-w)/(λmin-z))])
 
+def Q_z(z,lmin,lmax):
+    """
+    max_{x\in[lmin,lmax]} 1/|x-z|
+    """
+    
+    if np.real(z) < lmin:
+        return 1/np.abs(lmin-z)
+    elif np.real(z) > lmax:
+        return 1/np.abs(lmax-z)
+    else:
+        return 1/np.imag(z)
 
 def get_lanf(Eval, Evec, b, B_0, f, Q, k):
     """
@@ -237,7 +248,7 @@ def get_lan_wLS(Eval, Evec, b, B_0, w, Q, k):
     return get_lanf(Eval, Evec, b, B_0, f, Q, k)
     
     
-def trig_ineq_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k, hnorm):
+def trig_ineq_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f, c, Λ, V, Q, k, hnorm):
     """
     Input
     -----
@@ -271,6 +282,71 @@ def trig_ineq_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f
     trig_ineq_bound = np.abs(f(z))*hnorm(errz)*np.abs(dz)
 
     return trig_ineq_bound
+    
+def trig_ineq_quad_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f, c, Λ, V, Q, k):
+    """
+    Input
+    -----
+    t       : time variable to integrate along
+    contour : contour to integrate along
+    angle   : angle(Theta) of the Pacman contour
+    r       : radius of the Pacman contour
+    Eval    : eigevnalues of T
+    Evec    : eigenvectors of T
+    b       : block size
+    B_0     : first block
+    λmin    : minimum eigenvalue
+    f       : function to integrat
+    Λ       : specturm of matrix H
+    V       : d x b block vector
+    Q       : First K-1 blocks of Lanczos vectors
+    k       : number of iterations
+    hnorm   : norm function
+    
+    Returns
+    -------
+    trig_ineq_bound : |f(z)| ||err_k(z)|| |dz|
+    """
+    
+    z,dz = contour(t, angle, r, λmin, c)
+
+    lan_zLS = get_lan_wLS(Eval, Evec, b, B_0, z, Q, k)
+    
+    errz = 1/(Λ-z)[:,None]*V - lan_zLS
+    
+    trig_ineq_bound = np.abs(f(z))*np.linalg.norm(V.T@errz,ord=2)*np.abs(dz)
+
+    return trig_ineq_bound
+
+def quad_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, λmax):
+    """
+    Input
+    -----
+    t       : time variable to integrate along
+    contour : contour to integrate along
+    angle   : angle(Theta) of the Pacman contour
+    r       : radius of the Pacman contour
+    Eval    : eigevnalues of T
+    Evec    : eigenvectors of T
+    b       : block size
+    B_0     : first block
+    λmin    : minimum eigenvalue
+    f       : function to integrate
+    w       : shift w
+    λmax    : maximum eigenvalue
+    
+    Returns
+    -------
+    a_posteriori_bound : |f(z)| ||h_{w, z}(H)||_2 ||C(w)^{-1}C(z)||_2 |dz|
+    """
+    
+    z,dz = contour(t, angle, r, λmin, c)
+
+    CwinvCz = get_CwinvCz(Eval,Evec,z,w,b,B_0)
+    
+    a_posteriori_bound = np.abs(f(z))*Q_z(z,λmin,λmax)**2*np.linalg.norm(CwinvCz,ord=2)**2*np.abs(dz)
+
+    return a_posteriori_bound
 
 
 def a_posteriori_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, λmax):
@@ -299,13 +375,13 @@ def a_posteriori_bound_integrand(t, contour, angle, r, Eval, Evec, b, B_0, λmin
 
     CwinvCz = get_CwinvCz(Eval,Evec,z,w,b,B_0)
     
-    a_posteriori_bound = np.abs(f(z))*H_wz(w,z,λmin,λmax)*np.linalg.norm(CwinvCz,ord=2)*np.abs(dz)
+    a_posteriori_bound = np.abs(f(z))*Q_wz(w,z,λmin,λmax)*np.linalg.norm(CwinvCz,ord=2)*np.abs(dz)
 
     return a_posteriori_bound
 
-def get_trig_ineq_bound(pts, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k, hnorm):
-    result = sp.integrate.quad(trig_ineq_bound_integrand, 0, angle, args=(Γ, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k, hnorm))[0]
-    result += sp.integrate.quad(trig_ineq_bound_integrand, 0, 1, args=(Γl, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, Λ, V, Q, k, hnorm), points = pts)[0]
+def get_trig_ineq_bound(pts, angle, r, Eval, Evec, b, B_0, λmin, f, c, Λ, V, Q, k, hnorm):
+    result = sp.integrate.quad(trig_ineq_bound_integrand, 0, angle, args=(Γ, angle, r, Eval, Evec, b, B_0, λmin, f, c, Λ, V, Q, k, hnorm))[0]
+    result += sp.integrate.quad(trig_ineq_bound_integrand, 0, 1, args=(Γl, angle, r, Eval, Evec, b, B_0, λmin, f, c, Λ, V, Q, k, hnorm), points = pts)[0]
     result /= np.pi
     return result
 
@@ -316,14 +392,27 @@ def get_a_posteriori_bound(pts, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, λ
     result /= np.pi
     return result
 
+def trig_ineq_quad_bound(pts, angle, r, Eval, Evec, b, B_0, λmin, f, c, Λ, V, Q, k):
+    result = sp.integrate.quad(trig_ineq_quad_integrand, 0, angle, args=(Γ, angle, r, Eval, Evec, b, B_0, λmin, f, c, Λ, V, Q, k))[0]
+    result += sp.integrate.quad(trig_ineq_quad_integrand, 0, 1, args=(Γl, angle, r, Eval, Evec, b, B_0, λmin, f, c, Λ, V, Q, k), points = pts)[0]
+    result /= np.pi
+    return result
+
+
+def quad_bound(pts, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, λmax):
+    result = sp.integrate.quad(quad_integrand,0, angle, args=(Γ, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, λmax))[0]
+    result += sp.integrate.quad(quad_integrand, 0, 1, args=(Γl, angle, r, Eval, Evec, b, B_0, λmin, f, c, w, λmax), points = pts)[0]
+    result /= np.pi
+    return result
+
 # H-wI
 def h_w(Λ, w):
     h_of_H = Λ-w
     return h_of_H
 
-def h_norm(X, Λ, h, *args):
-    norm = np.linalg.norm(np.sqrt(h(Λ, *args))[:,None]*X)
-    return norm
+# def h_norm(X, Λ, h, *args):
+#     norm = np.linalg.norm(np.sqrt(h(Λ, *args))[:,None]*X)
+#     return norm
 
 def get_hnorm(Λ,h):
     """
@@ -341,3 +430,4 @@ def get_hnorm(Λ,h):
         return np.linalg.norm(np.sqrt(h(Λ))[:,None]*X)
     
     return h_norm
+
